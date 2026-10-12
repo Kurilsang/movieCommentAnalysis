@@ -50,12 +50,14 @@ public class ThreeClassDeriver {
     /**
      * 从二分类概率派生三分类（仅置信度间隔法，不叠加规则）。
      *
+     * spec 原文："|p_pos − p_neg| < θ 判为中性"（严格小于）。
+     *
      * @param posProb 正面概率
      * @param negProb 负面概率
      * @return 三分类极性
      */
     public SentimentPolarity derive(double posProb, double negProb) {
-        if (Math.abs(posProb - negProb) < theta - EPSILON) {
+        if (Math.abs(posProb - negProb) < theta) {
             return SentimentPolarity.NEUTRAL;
         }
         return posProb > negProb ? SentimentPolarity.POSITIVE : SentimentPolarity.NEGATIVE;

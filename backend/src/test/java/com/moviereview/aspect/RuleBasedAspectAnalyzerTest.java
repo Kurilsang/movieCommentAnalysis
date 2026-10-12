@@ -45,12 +45,21 @@ class RuleBasedAspectAnalyzerTest {
     }
 
     @Test
-    @DisplayName("锚点显式才报告：'太拖沓了' 不报告任何方面（无方面词）")
+    @DisplayName("锚点显式才报告：'太拖沓了' 不报告任何方面（拖沓是观点词，不是锚点词）")
     void onlyExplicitAnchors_reported() {
         Map<String, AspectResult> results = analyzer.analyze("太拖沓了");
-        // "拖沓" 是"节奏"的同义词，所以节奏会被提及
-        AspectResult pacing = results.get("节奏");
-        assertTrue(pacing.mentioned(), "'拖沓' 是节奏的同义词，应提及节奏");
+        // "拖沓" 是观点词，不是锚点词，所以不应报告任何方面
+        for (var entry : results.entrySet()) {
+            assertFalse(entry.getValue().mentioned(),
+                    entry.getKey() + " 不应被提及（'拖沓' 是观点词，不是锚点词）");
+        }
+    }
+
+    @Test
+    @DisplayName("锚点显式才报告：'剧情拖沓' 报告剧情（'剧情'是锚点词）")
+    void explicitAnchor_reported() {
+        Map<String, AspectResult> results = analyzer.analyze("剧情拖沓");
+        assertTrue(results.get("剧情").mentioned(), "'剧情' 是锚点词，应报告剧情");
     }
 
     @Test

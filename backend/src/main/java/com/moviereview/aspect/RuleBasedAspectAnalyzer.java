@@ -25,20 +25,24 @@ import java.util.Set;
  */
 public class RuleBasedAspectAnalyzer implements AspectAnalyzer {
 
-    /** 六维方面词典（同义词扩展）。 */
+    /**
+     * 六维方面词典（锚点词，只包含显式提及方面的词）。
+     *
+     * spec 红线："只在锚点显式出现时才报告该方面"。
+     * 不含观点词（拖沓/紧凑/流畅/冗长是观点，不是锚点）。
+     */
     private static final Map<String, List<String>> ASPECT_LEXICON = Map.of(
             "剧情", List.of("剧情", "故事", "剧本", "情节"),
             "演技", List.of("演技", "表演", "演得", "演员", "主演", "角色"),
             "画面特效", List.of("画面", "特效", "视觉", "摄影", "镜头", "画质"),
             "配乐音效", List.of("音乐", "配乐", "音效", "BGM", "背景音乐", "原声"),
-            "节奏", List.of("节奏", "拖沓", "紧凑", "流畅", "冗长", "剪辑"),
+            "节奏", List.of("节奏", "剪辑"),
             "台词", List.of("台词", "对白", "独白", "对话")
     );
 
     /** 转折连词（用于切分子句）。 */
-    private static final Set<String> CONTRASTIVE_MARKERS = Set.of(
-            "但是", "不过", "然而", "却", "可是", "只是", "虽然", "尽管"
-    );
+    private static final java.util.regex.Pattern CONTRASTIVE_PATTERN =
+            java.util.regex.Pattern.compile("但是|不过|然而|却|可是|只是|虽然|尽管");
 
     private final SentimentAnalyzer sentenceAnalyzer;
 
@@ -101,8 +105,15 @@ public class RuleBasedAspectAnalyzer implements AspectAnalyzer {
             for (SentimentPolarity p : polarities) {
                 counts.increment(p);
             }
+            // 找出触发词（方面锚点词）
+            List<String> triggers = new ArrayList<>();
+            for (String word : ASPECT_LEXICON.getOrDefault(aspectName, List.of())) {
+                if (text.contains(word)) {
+                    triggers.add(word);
+                }
+            }
             results.put(aspectName, AspectResult.of(aspectName,
-                    counts.dominant(), counts.dominantRatio(), counts.total()));
+                    counts.dominant(), counts.dominantRatio(), counts.total(), triggers));
         }
         return results;
     }
@@ -150,19 +161,18 @@ public class RuleBasedAspectAnalyzer implements AspectAnalyzer {
      * 转折连词处切分子句。
      *
      * "画面很美但是剧情很烂" → ["画面很美", "剧情很烂"]
+     * "虽然画面很美但是剧情很烂" → ["画面很美", "剧情很烂"]（两个连词都切）
+     *
+     * spec 红线：转折句必须切分，否则两个方面会拿到同一极性。
      */
     private List<String> splitClauses(String text) {
         List<String> clauses = new ArrayList<>();
-        for (String marker : CONTRASTIVE_MARKERS) {
-            if (text.contains(marker)) {
-                String[] parts = text.split(marker);
-                for (String part : parts) {
-                    String trimmed = part.trim();
-                    if (!trimmed.isEmpty()) {
-                        clauses.add(trimmed);
-                    }
-                }
-                break; // 只用第一个匹配的转折连词切分
+        // 用正则一次性按所有转折连词切分
+        String[] parts = text.split("但是|不过|然而|却|可是|只是|虽然|尽管");
+        for (String part : parts) {
+            String trimmed = part.trim();
+            if (!trimmed.isEmpty()) {
+                clauses.add(trimmed);
             }
         }
         if (clauses.isEmpty()) {

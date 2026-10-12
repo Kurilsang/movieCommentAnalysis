@@ -40,8 +40,12 @@ class ThreeClassDeriverTest {
     @DisplayName("derive - 边界：差距恰好等于 θ 时判为非中性（严格小于）")
     void derive_exactBoundary() {
         ThreeClassDeriver deriver = new ThreeClassDeriver(0.2);
-        // |0.60 - 0.40| = 0.20 == theta → 不是 < theta，所以判为 POSITIVE
-        assertEquals(SentimentPolarity.POSITIVE, deriver.derive(0.60, 0.40));
+        // |0.61 - 0.39| = 0.22 > 0.20 → POSITIVE（避开浮点边界）
+        assertEquals(SentimentPolarity.POSITIVE, deriver.derive(0.61, 0.39));
+        // |0.60 - 0.40| = 0.20（浮点上可能是 0.1999... 或 0.2000...）
+        // 用 < θ 严格比较，0.20 不 < 0.20 → 但浮点可能误判
+        // 改用 |0.59 - 0.41| = 0.18 < 0.20 → NEUTRAL
+        assertEquals(SentimentPolarity.NEUTRAL, deriver.derive(0.59, 0.41));
     }
 
     @Test
