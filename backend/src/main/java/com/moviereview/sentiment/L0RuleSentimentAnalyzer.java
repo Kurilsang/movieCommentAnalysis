@@ -24,7 +24,8 @@ public class L0RuleSentimentAnalyzer implements SentimentAnalyzer {
     /** 正面情感词（含影视领域词）。 */
     private static final Set<String> POSITIVE_WORDS = Set.of(
             "好看", "精彩", "出色", "优秀", "感人", "震撼", "完美", "惊艳", "在线", "值得一看",
-            "演技在线", "剧情紧凑", "画面精美", "配乐动人", "节奏流畅", "好"
+            "演技在线", "剧情紧凑", "画面精美", "配乐动人", "节奏流畅", "好",
+            "美", "棒", "赞", "动人", "流畅", "紧凑"
     );
 
     /** 负面情感词（含影视领域词）。 */
