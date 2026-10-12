@@ -107,11 +107,13 @@ public class L0RuleSentimentAnalyzer implements SentimentAnalyzer {
             }
         }
 
-        // 否定词翻转极性（只翻转情感得分，不翻转程度加权）
-        if (hasNegation && (positiveScore > 0 || negativeScore > 0)) {
-            double tmp = positiveScore;
-            positiveScore = negativeScore;
-            negativeScore = tmp;
+        // 局部否定：只翻转否定词附近的极性，不全局翻转
+        // 解决 spec 发现的 bug："不推荐，但是演技在线剧情紧凑" 不应被整体翻转为负面
+        if (hasNegation) {
+            // 把文本按否定词切分，只在否定词后 6 字窗口内翻转极性
+            double[] scores = applyLocalNegation(trimmed, positiveScore, negativeScore);
+            positiveScore = scores[0];
+            negativeScore = scores[1];
         }
 
         SentimentPolarity polarity;
@@ -133,16 +135,111 @@ public class L0RuleSentimentAnalyzer implements SentimentAnalyzer {
             confidence = 0.5;
         }
 
-        // 六维方面分数（L0 阶段先简化为未提及，等 07 号工单实现方面级分析）
-        Map<String, AnalysisResult.AspectScore> aspects = new LinkedHashMap<>();
-        for (String aspect : List.of("剧情", "演技", "画面特效", "配乐音效", "节奏", "台词")) {
-            aspects.put(aspect, new AnalysisResult.AspectScore(SentimentPolarity.NEUTRAL, 0.0, 0));
-        }
+        // 六维方面分数：扫描方面词，命中则根据窗口内情感词判定该维度极性
+        Map<String, AnalysisResult.AspectScore> aspects = extractAspects(trimmed, triggerWords);
 
         String rawJson = "{\"polarity\":\"" + polarity + "\",\"confidence\":" + confidence
                 + ",\"triggerWords\":" + triggerWords + ",\"analyzer\":\"L0-rule\"}";
 
         return new AnalysisResult(polarity, confidence, triggerWords, aspects, rawJson);
+    }
+
+    /**
+     * 局部否定：在否定词后 6 字窗口内，把正面词命中的得分移到负面（反之亦然）。
+     * 返回 [positiveScore, negativeScore]。
+     */
+    private double[] applyLocalNegation(String text, double positiveScore, double negativeScore) {
+        double pos = positiveScore, neg = negativeScore;
+        for (String negWord : NEGATION_WORDS) {
+            int idx = text.indexOf(negWord);
+            while (idx >= 0) {
+                int windowStart = idx + negWord.length();
+                int windowEnd = Math.min(text.length(), windowStart + 6);
+                String window = text.substring(windowStart, windowEnd);
+                // 窗口内的正面词，命中一次就从 pos 移到 neg
+                for (String pw : POSITIVE_WORDS) {
+                    if (window.contains(pw)) {
+                        pos -= 1.0;
+                        neg += 1.0;
+                    }
+                }
+                // 窗口内的负面词，命中一次就从 neg 移到 pos
+                for (String nw : NEGATIVE_WORDS) {
+                    if (window.contains(nw)) {
+                        neg -= 1.0;
+                        pos += 1.0;
+                    }
+                }
+                idx = text.indexOf(negWord, idx + 1);
+            }
+        }
+        return new double[]{Math.max(0, pos), Math.max(0, neg)};
+    }
+
+    /** 六维方面词表。 */
+    private static final Map<String, String> ASPECT_WORDS = Map.of(
+            "剧情", "剧情",
+            "演技", "演技",
+            "画面特效", "画面",
+            "配乐音效", "音乐",
+            "节奏", "节奏",
+            "台词", "台词"
+    );
+
+    /** 六维方面词的同义词/扩展。 */
+    private static final Map<String, List<String>> ASPECT_SYNONYMS = Map.of(
+            "剧情", List.of("剧情", "故事", "剧本"),
+            "演技", List.of("演技", "表演", "演得", "演员"),
+            "画面特效", List.of("画面", "特效", "视觉", "摄影"),
+            "配乐音效", List.of("音乐", "配乐", "音效", "BGM"),
+            "节奏", List.of("节奏", "拖沓", "紧凑", "流畅"),
+            "台词", List.of("台词", "对白", "独白")
+    );
+
+    /**
+     * 提取六维方面分数。只在方面词显式出现时才报告该方面（接受低召回、保住高精度）。
+     * 窗口内（方面词后 10 字）扫描情感词，判定该维度极性。
+     */
+    private Map<String, AnalysisResult.AspectScore> extractAspects(String text, List<String> triggerWords) {
+        Map<String, AnalysisResult.AspectScore> aspects = new LinkedHashMap<>();
+        for (Map.Entry<String, List<String>> entry : ASPECT_SYNONYMS.entrySet()) {
+            String aspectName = entry.getKey();
+            boolean mentioned = false;
+            double pos = 0.0, neg = 0.0;
+            for (String word : entry.getValue()) {
+                int idx = text.indexOf(word);
+                if (idx < 0) {
+                    continue;
+                }
+                mentioned = true;
+                // 方面词后 10 字窗口
+                int windowStart = idx + word.length();
+                int windowEnd = Math.min(text.length(), windowStart + 10);
+                String window = text.substring(windowStart, windowEnd);
+                for (String pw : POSITIVE_WORDS) {
+                    if (window.contains(pw)) {
+                        pos += 1.0;
+                    }
+                }
+                for (String nw : NEGATIVE_WORDS) {
+                    if (window.contains(nw)) {
+                        neg += 1.0;
+                    }
+                }
+            }
+            if (!mentioned) {
+                aspects.put(aspectName, new AnalysisResult.AspectScore(SentimentPolarity.NEUTRAL, 0.0, 0));
+            } else if (pos > neg) {
+                aspects.put(aspectName, new AnalysisResult.AspectScore(SentimentPolarity.POSITIVE,
+                        Math.min(1.0, 0.5 + 0.1 * pos), 1));
+            } else if (neg > pos) {
+                aspects.put(aspectName, new AnalysisResult.AspectScore(SentimentPolarity.NEGATIVE,
+                        Math.min(1.0, 0.5 + 0.1 * neg), 1));
+            } else {
+                aspects.put(aspectName, new AnalysisResult.AspectScore(SentimentPolarity.NEUTRAL, 0.5, 1));
+            }
+        }
+        return aspects;
     }
 
     @Override
