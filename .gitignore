@@ -1,0 +1,38 @@
+# IDE
+.idea/
+*.iml
+.vscode/
+
+# Java
+backend/target/
+*.class
+*.jar
+*.log
+
+# Node
+frontend/node_modules/
+frontend/dist/
+frontend/.vite/
+
+# Python
+ml/__pycache__/
+ml/.venv/
+ml/*.egg-info
+ml/.ipynb_checkpoints/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Env
+.env
+.env.local
+
+# MySQL init SQL (optional, can be committed)
+# data/sql/*.sql
+
+# Model files (large binary)
+ml/**/*.onnx
+ml/**/*.bin
+ml/**/*.pt
+ml/**/*.safetensors
