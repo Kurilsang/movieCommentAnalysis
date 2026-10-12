@@ -49,44 +49,20 @@ public class ThetaSensitivityAnalyzer {
         List<ThetaPoint> results = new ArrayList<>();
         for (double theta = thetaMin; theta <= thetaMax + 1e-9; theta += step) {
             ThreeClassDeriver deriver = new ThreeClassDeriver(theta);
-
-            int correct = 0;
+            ClassificationMetrics metrics = new ClassificationMetrics();
             int neutralCount = 0;
-            // per-class TP/FP/FN
-            int[] tp = new int[3], fp = new int[3], fn = new int[3];
 
             for (BinaryLabeledSample s : samples) {
                 SentimentPolarity predicted = deriver.derive(s.posProb(), s.negProb());
                 SentimentPolarity actual = s.golden();
-
                 if (predicted == SentimentPolarity.NEUTRAL) {
                     neutralCount++;
                 }
-
-                int actualIdx = actual.ordinal();
-                int predIdx = predicted.ordinal();
-                if (actual == predicted) {
-                    correct++;
-                    tp[actualIdx]++;
-                } else {
-                    fp[predIdx]++;
-                    fn[actualIdx]++;
-                }
+                metrics.record(actual, predicted);
             }
 
-            double accuracy = (double) correct / samples.size();
-            double macroF1 = 0;
-            int counted = 0;
-            for (int i = 0; i < 3; i++) {
-                if (tp[i] + fp[i] + fn[i] == 0) continue;
-                double p = (tp[i] + fp[i] == 0) ? 0 : (double) tp[i] / (tp[i] + fp[i]);
-                double r = (tp[i] + fn[i] == 0) ? 0 : (double) tp[i] / (tp[i] + fn[i]);
-                double f1 = (p + r == 0) ? 0 : 2 * p * r / (p + r);
-                macroF1 += f1;
-                counted++;
-            }
-            if (counted > 0) macroF1 /= counted;
-
+            double accuracy = metrics.accuracy();
+            double macroF1 = metrics.macroF1();
             double neutralRatio = (double) neutralCount / samples.size();
             results.add(new ThetaPoint(round(theta), accuracy, macroF1, neutralRatio, neutralCount));
         }

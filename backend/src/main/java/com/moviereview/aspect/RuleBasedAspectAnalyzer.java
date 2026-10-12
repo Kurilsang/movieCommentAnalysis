@@ -97,27 +97,12 @@ public class RuleBasedAspectAnalyzer implements AspectAnalyzer {
                 continue;
             }
 
-            int pos = 0, neu = 0, neg = 0;
+            PolarityCounts counts = new PolarityCounts();
             for (SentimentPolarity p : polarities) {
-                switch (p) {
-                    case POSITIVE -> pos++;
-                    case NEUTRAL -> neu++;
-                    case NEGATIVE -> neg++;
-                }
+                counts.increment(p);
             }
-            SentimentPolarity dominant;
-            double confidence;
-            if (pos >= neg && pos >= neu) {
-                dominant = SentimentPolarity.POSITIVE;
-                confidence = (double) pos / polarities.size();
-            } else if (neg >= pos && neg >= neu) {
-                dominant = SentimentPolarity.NEGATIVE;
-                confidence = (double) neg / polarities.size();
-            } else {
-                dominant = SentimentPolarity.NEUTRAL;
-                confidence = (double) neu / polarities.size();
-            }
-            results.put(aspectName, AspectResult.of(aspectName, dominant, confidence, polarities.size()));
+            results.put(aspectName, AspectResult.of(aspectName,
+                    counts.dominant(), counts.dominantRatio(), counts.total()));
         }
         return results;
     }
@@ -128,9 +113,9 @@ public class RuleBasedAspectAnalyzer implements AspectAnalyzer {
             throw new IllegalArgumentException("texts 不能为空");
         }
 
-        Map<String, int[]> counters = new LinkedHashMap<>(); // [pos, neu, neg, total]
+        Map<String, PolarityCounts> counters = new LinkedHashMap<>();
         for (String aspectName : aspectNames()) {
-            counters.put(aspectName, new int[4]);
+            counters.put(aspectName, new PolarityCounts());
         }
 
         for (String text : texts) {
@@ -138,21 +123,15 @@ public class RuleBasedAspectAnalyzer implements AspectAnalyzer {
             for (Map.Entry<String, AspectResult> entry : results.entrySet()) {
                 AspectResult r = entry.getValue();
                 if (!r.mentioned()) continue;
-                int[] c = counters.get(entry.getKey());
-                switch (r.polarity()) {
-                    case POSITIVE -> c[0]++;
-                    case NEUTRAL -> c[1]++;
-                    case NEGATIVE -> c[2]++;
-                }
-                c[3]++;
+                counters.get(entry.getKey()).increment(r.polarity());
             }
         }
 
         Map<String, AspectAggregate> aggregates = new LinkedHashMap<>();
-        for (Map.Entry<String, int[]> entry : counters.entrySet()) {
+        for (Map.Entry<String, PolarityCounts> entry : counters.entrySet()) {
             String aspectName = entry.getKey();
-            int[] c = entry.getValue();
-            int pos = c[0], neu = c[1], neg = c[2], total = c[3];
+            PolarityCounts c = entry.getValue();
+            int pos = c.positive(), neu = c.neutral(), neg = c.negative(), total = c.total();
             double raw = AspectAggregate.rawScore(pos, total);
             double smoothed = AspectAggregate.smoothedScore(pos, total);
             boolean sufficient = AspectAggregate.sufficientData(total);

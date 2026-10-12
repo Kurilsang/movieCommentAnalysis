@@ -19,6 +19,12 @@ public class ThreeClassDeriver {
     /** 短评论阈值（少于 N 个字符视为过短）。 */
     private static final int SHORT_TEXT_THRESHOLD = 5;
 
+    /** 短评论时阈值放松倍率。 */
+    private static final double SHORT_TEXT_RELAX = 1.5;
+
+    /** 中性标记词时阈值放松倍率。 */
+    private static final double NEUTRAL_MARKER_RELAX = 2.0;
+
     /** 中性标记词。 */
     private static final java.util.Set<String> NEUTRAL_MARKERS = java.util.Set.of(
             "还行", "一般", "凑合", "普通", "中规中矩", "过得去", "还可以", "没什么"
@@ -72,8 +78,7 @@ public class ThreeClassDeriver {
 
         // 规则信号 1：评论过短 → 倾向中性
         if (text.trim().length() < SHORT_TEXT_THRESHOLD && base != SentimentPolarity.NEUTRAL) {
-            // 短评论 + 概率差距不大 → 中性
-            if (Math.abs(posProb - negProb) < theta * 1.5) {
+            if (Math.abs(posProb - negProb) < theta * SHORT_TEXT_RELAX) {
                 return SentimentPolarity.NEUTRAL;
             }
         }
@@ -81,8 +86,7 @@ public class ThreeClassDeriver {
         // 规则信号 2：含中性标记词 → 倾向中性
         for (String marker : NEUTRAL_MARKERS) {
             if (text.contains(marker) && base != SentimentPolarity.NEUTRAL) {
-                // 中性标记词 + 概率差距不大 → 中性
-                if (Math.abs(posProb - negProb) < theta * 2.0) {
+                if (Math.abs(posProb - negProb) < theta * NEUTRAL_MARKER_RELAX) {
                     return SentimentPolarity.NEUTRAL;
                 }
             }
