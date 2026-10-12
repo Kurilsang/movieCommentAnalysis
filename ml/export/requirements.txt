@@ -1,0 +1,6 @@
+# ONNX 导出依赖
+# 若 transformers 5.x 破坏 optimum 导出，改为 "transformers<5"
+transformers>=4.40,<6
+optimum>=1.20
+onnxruntime>=1.31
+torch>=2.2
