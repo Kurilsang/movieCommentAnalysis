@@ -1,17 +1,24 @@
 spring:
   datasource:
-    url: jdbc:h2:mem:testdb;DB_CLOSE_DELAY=-1
+    url: jdbc:h2:mem:testdb;DB_CLOSE_DELAY=-1;MODE=MySQL
     driver-class-name: org.h2.Driver
     username: sa
     password:
   sql:
     init:
       mode: always
-      schema-locations: classpath:schema-test.sql
+      schema-locations: classpath:schema.sql
+      continue-on-error: true
+
+# 测试环境不导入真实 CSV（测试自备种子数据）
+app:
+  data:
+    dir: ./nonexistent-test-data
+    import-enabled: false
 
 mybatis-plus:
   mapper-locations: classpath*:mapper/*.xml
-  type-aliases-package: com.moviereview.user
+  type-aliases-package: com.moviereview.movie,com.moviereview.user
   configuration:
     map-underscore-to-camel-case: true
 
@@ -21,4 +28,4 @@ jwt:
 
 logging:
   level:
-    com.moviereview: debug
+    com.moviereview: info
