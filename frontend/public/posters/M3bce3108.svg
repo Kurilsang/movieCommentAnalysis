@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="200" height="280" viewBox="0 0 200 280">
+  <defs>
+    <linearGradient id="g" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#134e4a"/>
+      <stop offset="100%" stop-color="#14b8a6"/>
+    </linearGradient>
+  </defs>
+  <rect width="200" height="280" fill="url(#g)"/>
+  <rect x="10" y="10" width="180" height="260" fill="none" stroke="#ffffff" stroke-opacity="0.22" stroke-width="1" rx="4"/>
+  <text font-family="'Microsoft YaHei','PingFang SC','Noto Sans CJK SC',sans-serif"
+        font-size="14" font-weight="600" fill="#ffffff" text-anchor="middle" opacity="0.96">
+    <tspan x="100" y="129">再次出发之纽约遇见你</tspan>
+    <tspan x="100" y="155">Begin Again</tspan>
+  </text>
+</svg>

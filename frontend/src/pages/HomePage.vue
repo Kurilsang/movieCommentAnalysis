@@ -27,11 +27,12 @@
         <el-card shadow="hover" @click="goDetail(movie.id)">
           <div class="poster">
             <el-image
-              :src="movie.posterUrl || 'https://via.placeholder.com/200x280?text=No+Poster'"
+              :src="posterOf(movie)"
               fit="cover"
+              lazy
             >
               <template #error>
-                <div class="poster-placeholder">暂无海报</div>
+                <div class="poster-placeholder">{{ movie.title }}</div>
               </template>
             </el-image>
           </div>
@@ -78,6 +79,12 @@ const loadMovies = async () => {
 const handleSearch = () => loadMovies()
 
 const goDetail = (id) => router.push(`/movie/${id}`)
+
+/**
+ * 海报地址。数据源没有真实海报，用本地生成的 SVG 封面（零网络依赖）。
+ * 演示铁律：绝不依赖实时网络请求。
+ */
+const posterOf = (movie) => movie.posterUrl || `/posters/${movie.id}.svg`
 
 const getSentimentType = (rate) => {
   if (rate >= 0.7) return 'success'

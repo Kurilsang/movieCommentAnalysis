@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="200" height="280" viewBox="0 0 200 280">
+  <defs>
+    <linearGradient id="g" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#1e3a8a"/>
+      <stop offset="100%" stop-color="#3b82f6"/>
+    </linearGradient>
+  </defs>
+  <rect width="200" height="280" fill="url(#g)"/>
+  <rect x="10" y="10" width="180" height="260" fill="none" stroke="#ffffff" stroke-opacity="0.22" stroke-width="1" rx="4"/>
+  <text font-family="'Microsoft YaHei','PingFang SC','Noto Sans CJK SC',sans-serif"
+        font-size="14" font-weight="600" fill="#ffffff" text-anchor="middle" opacity="0.96">
+    <tspan x="100" y="116">无敌破坏王</tspan>
+    <tspan x="100" y="142">Wreck-It</tspan>
+    <tspan x="100" y="168">Ralph</tspan>
+  </text>
+</svg>

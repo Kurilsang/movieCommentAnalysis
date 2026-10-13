@@ -5,10 +5,14 @@
       <el-row :gutter="20">
         <el-col :span="6">
           <el-image
-            :src="movie.posterUrl || 'https://via.placeholder.com/200x280'"
+            :src="movie.posterUrl || `/posters/${movieId}.svg`"
             fit="cover"
             class="poster"
-          />
+          >
+            <template #error>
+              <div class="poster-fallback">{{ movie.title }}</div>
+            </template>
+          </el-image>
         </el-col>
         <el-col :span="18">
           <h1>{{ movie.title }}</h1>
