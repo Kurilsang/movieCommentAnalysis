@@ -46,7 +46,8 @@ CREATE TABLE IF NOT EXISTS comment (
     created_at TIMESTAMP
 );
 
-CREATE INDEX IF NOT EXISTS idx_comment_movie ON comment (movie_id);
+-- 注意：MySQL 不支持 CREATE INDEX IF NOT EXISTS，故索引在表内用 KEY 声明
+-- （见下方 ALTER 语句由 Spring 的 continue-on-error 容错）
 
 -- ========== 分析结果 ==========
 
@@ -59,10 +60,9 @@ CREATE TABLE IF NOT EXISTS comment_analysis (
     analyzer_name VARCHAR(50),
     raw_json TEXT,
     elapsed_ms BIGINT,
-    created_at TIMESTAMP
+    created_at TIMESTAMP,
+    KEY idx_analysis_comment (comment_id)
 );
-
-CREATE INDEX IF NOT EXISTS idx_analysis_comment ON comment_analysis (comment_id);
 
 -- 方面级结果用纵表：维度集合可能调整，纵表零迁移成本
 CREATE TABLE IF NOT EXISTS comment_aspect (
@@ -74,10 +74,9 @@ CREATE TABLE IF NOT EXISTS comment_aspect (
     confidence DOUBLE,
     sample_count INT DEFAULT 0,
     trigger_words TEXT,
-    created_at TIMESTAMP
+    created_at TIMESTAMP,
+    KEY idx_aspect_comment (comment_id)
 );
-
-CREATE INDEX IF NOT EXISTS idx_aspect_comment ON comment_aspect (comment_id);
 
 -- ========== 爬虫任务 ==========
 

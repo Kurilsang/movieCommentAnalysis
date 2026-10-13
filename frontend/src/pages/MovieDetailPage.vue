@@ -217,7 +217,12 @@ const renderRadar = () => {
         label: {
           show: true,
           fontSize: 11,
-          formatter: (params) => `${params.value}\n(${counts[params.dataIndex]}条)`
+          // 注意：ECharts 雷达图的 label.formatter 回调里 params.dataIndex 恒为 0，
+          // 必须用 params.dimensionIndex 或闭包索引，否则所有轴显示同一个样本量。
+          formatter: (params) => {
+            const i = params.dimensionIndex ?? params.dataIndex ?? 0
+            return `${values[i]}\n(${counts[i]}条)`
+          }
         }
       }]
     }]

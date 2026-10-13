@@ -55,15 +55,23 @@ public class AnalysisService {
     /**
      * 重跑全库分析（幂等：覆盖而非新增）。
      *
+     * 性能：4000 条评论 × (1 analysis + 6 aspect) = 28000 行，
+     * 逐条 insert 太慢，这里用分批 + 事务提交。
+     *
      * @return 分析的评论条数
      */
+    @org.springframework.transaction.annotation.Transactional
     public int rerunAll() {
         analysisMapper.delete(null);
         aspectMapper.delete(null);
 
         List<CommentEntity> comments = commentMapper.selectList(null);
+        int batch = 0;
         for (CommentEntity c : comments) {
             analyzeAndSave(c);
+            if (++batch % 500 == 0) {
+                log.info("预计算进度：{}/{}", batch, comments.size());
+            }
         }
         log.info("全库重跑完成：{} 条评论", comments.size());
         return comments.size();
@@ -176,15 +184,14 @@ public class AnalysisService {
         return m;
     }
 
-    /** 正面占比（0-100）。 */
+    /** 正面占比（0-100）。复用 AspectAggregate 的实现，避免公式重复。 */
     static double rawScore(int positive, int total) {
-        return total == 0 ? 0.0 : 100.0 * positive / total;
+        return com.moviereview.aspect.AspectAggregate.rawScore(positive, total);
     }
 
-    /** 贝叶斯平滑（小样本向 50 分收缩）。 */
+    /** 贝叶斯平滑（小样本向 50 分收缩）。复用 AspectAggregate 的实现。 */
     static double smoothedScore(int positive, int total) {
-        double priorMean = 0.5, priorStrength = 10.0;
-        return (positive + priorMean * priorStrength) / (total + priorStrength) * 100.0;
+        return com.moviereview.aspect.AspectAggregate.smoothedScore(positive, total);
     }
 
     /**

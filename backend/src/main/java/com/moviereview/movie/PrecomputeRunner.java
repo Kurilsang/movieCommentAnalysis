@@ -43,7 +43,7 @@ public class PrecomputeRunner implements ApplicationRunner {
                 log.info("分析结果已存在（{}/{}），跳过预计算", analyzed, total);
                 return;
             }
-            log.info("开始预计算 {} 条评论的分析结果...", total);
+            log.info("开始预计算 {} 条评论的分析结果（已有 {} 条）...", total, analyzed);
             long start = System.currentTimeMillis();
             int count = analysisService.rerunAll();
             log.info("预计算完成：{} 条，耗时 {} ms", count, System.currentTimeMillis() - start);

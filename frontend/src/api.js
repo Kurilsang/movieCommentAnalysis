@@ -62,11 +62,12 @@ export const favoriteApi = {
   status: (movieId) => api.get(`/favorites/${movieId}/status`, { silent: true })
 }
 
-// 管理 API
+// 管理 API（需管理员权限）
 export const adminApi = {
   setEnabled: (userId, enabled) => api.put(`/admin/users/${userId}/enabled`, null, { params: { enabled } }),
   resetPassword: (userId, newPassword) => api.put(`/admin/users/${userId}/password`, { newPassword }),
   crawlerTasks: () => api.get('/admin/crawler/tasks'),
   triggerCrawler: (data) => api.post('/admin/crawler/trigger', data),
-  rerunAll: () => api.post('/admin/analysis/rerun-all')
+  rerunAll: () => api.post('/admin/analysis/rerun-all'),
+  overview: () => api.get('/admin/overview')
 }

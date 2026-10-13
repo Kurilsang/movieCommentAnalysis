@@ -74,16 +74,4 @@ public class CrawlerTaskService {
             default -> status;
         };
     }
-
-    /**
-     * 数据总览统计。
-     */
-    public Map<String, Object> overview(long analyzedCount) {
-        Map<String, Object> m = new LinkedHashMap<>();
-        m.put("totalMovies", movieMapper.selectCount(null));
-        m.put("totalComments", 0); // 由调用方填充
-        m.put("analyzedCount", analyzedCount);
-        m.put("modelCount", 1);
-        return m;
-    }
 }

@@ -30,12 +30,27 @@ public class CommentController {
 
     private final CommentMapper commentMapper;
     private final AnalysisService analysisService;
+    private final MovieMapper movieMapper;
 
     private final SentimentAnalyzer analyzer = new L0RuleSentimentAnalyzer();
     private final AspectAnalyzer aspectAnalyzer = new RuleBasedAspectAnalyzer(new L0RuleSentimentAnalyzer());
 
+    /** 未指定电影的评论归到这里（保证一定落库，不丢数据）。 */
+    static final String UNCLASSIFIED_MOVIE = "M_unclassified";
+
     /** 异步结果暂存（L1 预留；内存实现，P0 够用）。 */
     private final Map<String, Object> asyncResults = new ConcurrentHashMap<>();
+
+    /** 确保"未分类"占位电影存在。 */
+    private void ensureUnclassifiedMovie() {
+        if (movieMapper.selectById(UNCLASSIFIED_MOVIE) != null) return;
+        var m = new com.moviereview.movie.Movie();
+        m.setId(UNCLASSIFIED_MOVIE);
+        m.setTitle("未分类评论");
+        m.setCommentCount(0);
+        m.setCreatedAt(LocalDateTime.now());
+        movieMapper.insert(m);
+    }
 
     /**
      * 提交评论并实时分析。
@@ -55,17 +70,19 @@ public class CommentController {
         // 实时分析
         AnalysisResult result = analyzer.analyze(text);
 
-        // 落库（有 movieId 时才关联）
-        if (movieId != null && !movieId.isBlank()) {
-            CommentEntity c = new CommentEntity();
-            c.setMovieId(movieId);
-            c.setText(text);
-            c.setAuthor(currentUsername());
-            c.setLikeCount(0);
-            c.setCreatedAt(LocalDateTime.now());
-            commentMapper.insert(c);
-            analysisService.analyzeAndSave(c);
+        // 落库：没有 movieId 时归到"未分类"电影，保证提交的评论一定被持久化
+        String targetMovie = (movieId == null || movieId.isBlank()) ? UNCLASSIFIED_MOVIE : movieId;
+        if (UNCLASSIFIED_MOVIE.equals(targetMovie)) {
+            ensureUnclassifiedMovie();
         }
+        CommentEntity c = new CommentEntity();
+        c.setMovieId(targetMovie);
+        c.setText(text);
+        c.setAuthor(currentUsername());
+        c.setLikeCount(0);
+        c.setCreatedAt(LocalDateTime.now());
+        commentMapper.insert(c);
+        analysisService.analyzeAndSave(c);
 
         String taskId = UUID.randomUUID().toString();
         Map<String, Object> payload = toPayload(result, text);
