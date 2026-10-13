@@ -183,14 +183,21 @@ const renderRadar = () => {
   const chart = echarts.init(radarChart.value)
   const aspects = aspectData.value
   const names = Object.keys(aspects)
-  const values = names.map(n => aspects[n].smoothedScore || 0)
+  const values = names.map(n => Number((aspects[n].smoothedScore || 0).toFixed(1)))
   const counts = names.map(n => aspects[n].sampleCount || 0)
+  const sufficient = names.map(n => aspects[n].sufficientData !== false)
 
   chart.setOption({
-    tooltip: {},
+    tooltip: {
+      formatter: (params) => {
+        const i = params.dataIndex
+        return `${names[i]}<br/>平滑分: ${values[i]}<br/>样本量: ${counts[i]} 条${sufficient[i] ? '' : '<br/><span style="color:#E6A23C">样本量不足，仅供参考</span>'}`
+      }
+    },
     radar: {
       indicator: names.map(n => ({ name: n, max: 100 })),
-      radius: '60%'
+      radius: '58%',
+      axisName: { color: '#606266', fontSize: 13 }
     },
     series: [{
       type: 'radar',
@@ -199,9 +206,14 @@ const renderRadar = () => {
         name: '方面情感',
         areaStyle: { color: 'rgba(64, 158, 255, 0.3)' },
         lineStyle: { color: '#409EFF' },
+        itemStyle: {
+          // 样本量不足的维度用橙色标记
+          color: (params) => sufficient[params.dataIndex] ? '#409EFF' : '#E6A23C'
+        },
         label: {
           show: true,
-          formatter: (params) => `${params.value}\n(N=${counts[params.dataIndex]})`
+          fontSize: 11,
+          formatter: (params) => `${params.value}\n(${counts[params.dataIndex]}条)`
         }
       }]
     }]

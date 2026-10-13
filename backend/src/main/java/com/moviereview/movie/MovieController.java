@@ -18,6 +18,7 @@ import java.util.Map;
 public class MovieController {
 
     private final MovieService movieService;
+    private final AnalysisService analysisService;
 
     /**
      * 电影列表。
@@ -47,5 +48,33 @@ public class MovieController {
         m.put("synopsis", movie.getSynopsis());
         m.put("sentimentDistribution", movieService.sentimentDistribution(id));
         return ResponseEntity.ok(Map.of("movie", m));
+    }
+
+    /**
+     * 方面雷达图 + 好评差评代表句（03 号工单）。
+     *
+     * 注意：字段名是 sampleCount（前端读取的名字），不是 mentionedCount。
+     */
+    @GetMapping("/{id}/analyze")
+    public ResponseEntity<?> analyze(@PathVariable String id) {
+        if (movieService.findById(id) == null) {
+            return ResponseEntity.status(404).body(Map.of("error", "电影不存在"));
+        }
+        Map<String, Object> body = new LinkedHashMap<>();
+        body.put("aspects", analysisService.movieAspects(id));
+        body.put("positiveComments", analysisService.representativeComments(id, "POSITIVE", 10));
+        body.put("negativeComments", analysisService.representativeComments(id, "NEGATIVE", 10));
+        return ResponseEntity.ok(body);
+    }
+
+    /**
+     * 关键词（04 号工单）。
+     */
+    @GetMapping("/{id}/keywords")
+    public ResponseEntity<?> keywords(@PathVariable String id) {
+        if (movieService.findById(id) == null) {
+            return ResponseEntity.status(404).body(Map.of("error", "电影不存在"));
+        }
+        return ResponseEntity.ok(Map.of("keywords", analysisService.keywords(id, 30)));
     }
 }

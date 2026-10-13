@@ -28,6 +28,20 @@ public class SecurityConfig {
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http.csrf(csrf -> csrf.disable())
             .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+            .exceptionHandling(ex -> ex
+                // 未认证返回 401（Spring Security 默认是 403）
+                .authenticationEntryPoint((req, res, e) -> {
+                    res.setStatus(401);
+                    res.setContentType("application/json;charset=UTF-8");
+                    res.getWriter().write("{\"error\":\"未登录\"}");
+                })
+                // 已认证但无权限返回 403
+                .accessDeniedHandler((req, res, e) -> {
+                    res.setStatus(403);
+                    res.setContentType("application/json;charset=UTF-8");
+                    res.getWriter().write("{\"error\":\"无权限\"}");
+                })
+            )
             .authorizeHttpRequests(auth -> auth
                 // 公开接口
                 .requestMatchers("/api/auth/register", "/api/auth/login").permitAll()
