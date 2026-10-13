@@ -13,6 +13,16 @@ backend/target/
 frontend/node_modules/
 frontend/dist/
 frontend/.vite/
+node_modules/
+
+# Playwright
+test-results/
+playwright-report/
+.playwright/
+
+# 临时验证产物
+scripts/*.log
+*.tmpdir/
 
 # Python
 ml/__pycache__/
